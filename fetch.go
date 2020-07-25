@@ -2,22 +2,50 @@ package stream
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	lowe "github.com/m-rots/bernard"
+	"golang.org/x/time/rate"
 )
 
 type fetch struct {
 	auth    lowe.Authenticator
 	baseURL string
 	client  *http.Client
+	limiter *rate.Limiter
 }
 
-func (f *fetch) Range(ctx context.Context, rw io.Writer, ID string, start uint64, end uint64) error {
+func NewFetch(auth lowe.Authenticator) fetch {
+	const baseURL string = "https://www.googleapis.com/drive/v3"
+
+	return fetch{
+		auth:    auth,
+		baseURL: baseURL,
+		limiter: rate.NewLimiter(10, 1),
+		client: &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				// An empty map for TLSNextProto disables HTTP/2.
+				// Unfortunately, memory use and stability get hammered when using HTTP/2.
+				TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+			},
+			Timeout: time.Minute * 5,
+		},
+	}
+}
+
+func (f fetch) Range(ctx context.Context, rw io.Writer, ID string, start uint64, end uint64) error {
+	err := f.limiter.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
 	token, _, err := f.auth.AccessToken()
 	if err != nil {
 		return err
