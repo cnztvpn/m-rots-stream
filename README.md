@@ -47,6 +47,9 @@ auth: account.json
 # path does not matter, just keep it consistent
 database: bernard.db
 
+# port for the server to listen on
+port: 3000
+
 # See note below
 depth: 1
 
@@ -106,4 +109,4 @@ Not at the moment, it might in the future.
 
 > What port does Stream open?
 
-Port 3000. This might be changed in the future.
+Port 3000. However, you can choose another port in the config file.

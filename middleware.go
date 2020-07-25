@@ -2,6 +2,8 @@ package stream
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -51,9 +53,15 @@ func (h Stream) addFile(next httprouter.Handle) httprouter.Handle {
 		}
 
 		f, err := h.store.GetFile(r.Context(), id)
+		if errors.Is(sql.ErrNoRows, err) {
+			http.NotFound(w, r)
+			return
+		}
+
+		// serious issue if other errors occur?
 		if err != nil {
 			fmt.Println(err)
-			http.NotFound(w, r)
+			w.WriteHeader(500)
 			return
 		}
 

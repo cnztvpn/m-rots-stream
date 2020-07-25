@@ -74,7 +74,8 @@ func (h Stream) propFilms(w http.ResponseWriter, r *http.Request, _ httprouter.P
 
 	films, err := h.store.RecursiveFiles(r.Context(), h.filmsID)
 	if err != nil {
-		http.NotFound(w, r)
+		fmt.Println(err)
+		w.WriteHeader(500)
 		return
 	}
 
@@ -94,7 +95,8 @@ func (h Stream) propShows(w http.ResponseWriter, r *http.Request, _ httprouter.P
 
 	shows, err := h.store.RecursiveFolders(r.Context(), h.showsID, h.depth)
 	if err != nil {
-		w.WriteHeader(404)
+		fmt.Println(err)
+		w.WriteHeader(500)
 		return
 	}
 
@@ -206,6 +208,11 @@ func (h Stream) streamFile(w http.ResponseWriter, r *http.Request, _ httprouter.
 
 		if errors.Is(err, syscall.EPIPE) {
 			fmt.Printf("%s - stream epipe\n", requestID)
+			break
+		}
+
+		if errors.Is(err, syscall.ECONNRESET) {
+			fmt.Printf("%s - stream connection reset\n", requestID)
 			break
 		}
 
